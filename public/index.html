@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>GitHub Repo Analyzer</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                background: #0d1117;
+                color: #e6edf3;
+                min-height: 100vh;
+                padding: 40px 20px;
+            }
+
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                font-size: 28px;
+                margin-bottom: 8px;
+                color: #58a6ff;
+            }
+
+            p.subtitle {
+                color: #8b949e;
+                margin-bottom: 30px;
+            }
+
+            textarea {
+                width: 100%;
+                height: 140px;
+                background: #161b22;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                color: #e6edf3;
+                padding: 14px;
+                font-size: 14px;
+                resize: vertical;
+            }
+
+            textarea:focus {
+                outline: none;
+                border-color: #58a6ff;
+            }
+
+            button {
+                margin-top: 14px;
+                background: #238636;
+                color: white;
+                border: none;
+                padding: 12px 28px;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+                width: 100%;
+            }
+
+            button:hover {
+                background: #2ea043;
+            }
+            button:disabled {
+                background: #444;
+                cursor: not-allowed;
+            }
+
+            .results {
+                margin-top: 30px;
+            }
+
+            .card {
+                background: #161b22;
+                border: 1px solid #30363d;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 16px;
+            }
+
+            .card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 14px;
+            }
+
+            .card-header a {
+                color: #58a6ff;
+                font-size: 18px;
+                font-weight: bold;
+                text-decoration: none;
+            }
+
+            .card-header a:hover {
+                text-decoration: underline;
+            }
+
+            .description {
+                color: #8b949e;
+                font-size: 13px;
+                margin-bottom: 14px;
+            }
+
+            .stats {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+
+            .stat {
+                background: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            .badges {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .badge {
+                padding: 5px 14px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+
+            .activity {
+                background: #1f4e8c;
+                color: #58a6ff;
+            }
+
+            .complexity-Low {
+                background: #1a3a1a;
+                color: #3fb950;
+            }
+            .complexity-Medium {
+                background: #3a2e00;
+                color: #d29922;
+            }
+            .complexity-High {
+                background: #3a1a1a;
+                color: #f85149;
+            }
+
+            .difficulty-Beginner {
+                background: #1a3a1a;
+                color: #3fb950;
+            }
+            .difficulty-Intermediate {
+                background: #3a2e00;
+                color: #d29922;
+            }
+            .difficulty-Advanced {
+                background: #3a1a1a;
+                color: #f85149;
+            }
+
+            .languages {
+                font-size: 12px;
+                color: #8b949e;
+                margin-top: 10px;
+            }
+
+            .error-card {
+                background: #2a1a1a;
+                border: 1px solid #f85149;
+                border-radius: 10px;
+                padding: 16px;
+                margin-bottom: 16px;
+                color: #f85149;
+                font-size: 14px;
+            }
+
+            .loading {
+                text-align: center;
+                color: #8b949e;
+                padding: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔍 GitHub Repo Analyzer</h1>
+            <p class="subtitle">
+                Paste GitHub repository URLs below (one per line) to analyze
+                their activity, complexity, and difficulty.
+            </p>
+
+            <textarea
+                id="repoInput"
+                placeholder="https://github.com/facebook/react&#10;https://github.com/expressjs/express&#10;https://github.com/angular/angular"
+            ></textarea>
+
+            <button id="analyzeBtn" onclick="analyze()">
+                Analyze Repositories
+            </button>
+
+            <div class="results" id="results"></div>
+        </div>
+
+        <script>
+            async function analyze() {
+                const input = document.getElementById("repoInput").value.trim();
+                const btn = document.getElementById("analyzeBtn");
+                const resultsDiv = document.getElementById("results");
+
+                if (!input) {
+                    alert("Please enter at least one repository URL");
+                    return;
+                }
+
+                const repos = input.split("\n").filter((r) => r.trim() !== "");
+
+                btn.disabled = true;
+                btn.textContent = "Analyzing...";
+                resultsDiv.innerHTML =
+                    '<p class="loading">Fetching data from GitHub...</p>';
+
+                try {
+                    const response = await fetch("/analyze", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ repos }),
+                    });
+
+                    const data = await response.json();
+                    renderResults(data.results);
+                } catch (err) {
+                    resultsDiv.innerHTML =
+                        '<p style="color:#f85149">Something went wrong. Please try again.</p>';
+                }
+
+                btn.disabled = false;
+                btn.textContent = "Analyze Repositories";
+            }
+
+            function renderResults(results) {
+                const div = document.getElementById("results");
+
+                if (!results || results.length === 0) {
+                    div.innerHTML =
+                        '<p style="color:#8b949e">No results found.</p>';
+                    return;
+                }
+
+                div.innerHTML = results
+                    .map((r) => {
+                        if (r.error) {
+                            return `<div class="error-card">❌ ${r.url || "Unknown"} — ${r.error}</div>`;
+                        }
+
+                        return `
+          <div class="card">
+            <div class="card-header">
+              <a href="${r.url}" target="_blank">${r.name}</a>
+            </div>
+            <p class="description">${r.description}</p>
+            <div class="stats">
+              <span class="stat">⭐ ${r.stars.toLocaleString()} stars</span>
+              <span class="stat">🍴 ${r.forks.toLocaleString()} forks</span>
+              <span class="stat">❗ ${r.openIssues.toLocaleString()} open issues</span>
+              <span class="stat">👀 ${r.watchers.toLocaleString()} watchers</span>
+            </div>
+            <div class="badges">
+              <span class="badge activity">Activity: ${r.activityScore}/100</span>
+              <span class="badge complexity-${r.complexity}">Complexity: ${r.complexity}</span>
+              <span class="badge difficulty-${r.difficulty}">${r.difficulty}</span>
+            </div>
+            <p class="languages">Languages: ${r.languages.join(", ") || "N/A"}</p>
+          </div>
+        `;
+                    })
+                    .join("");
+            }
+        </script>
+    </body>
+</html>
